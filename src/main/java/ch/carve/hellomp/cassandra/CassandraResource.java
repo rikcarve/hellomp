@@ -3,7 +3,9 @@ package ch.carve.hellomp.cassandra;
 import java.lang.invoke.MethodHandles;
 
 import javax.annotation.PostConstruct;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
@@ -18,7 +20,6 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
 
-
 @Path("cassandra")
 public class CassandraResource {
 
@@ -26,7 +27,7 @@ public class CassandraResource {
 
     private ExchangerateAccessor exr;
     private Mapper<Exchangerate> mapper;
-    
+
     @PostConstruct
     public void init() {
         Cluster cluster = Cluster.builder().addContactPoint("localhost").build();
@@ -36,11 +37,22 @@ public class CassandraResource {
         mapper = manager.mapper(Exchangerate.class);
         logger.info("cassandra session initalized");
     }
-    
+
     @GET
     @Path("exr")
     @Produces("application/json")
     public Exchangerate exchangerate(@QueryParam("base") int base, @QueryParam("to") int to) {
         return exr.getOne(base, to, LocalDate.fromMillisSinceEpoch(System.currentTimeMillis()));
+    }
+    
+    @PUT
+    @Path("exr")
+    @Consumes("application/json")
+    public Response insert(Exchangerate rate) {
+        if (rate != null) {
+            rate.setEffectiveFrom(LocalDate.fromMillisSinceEpoch(System.currentTimeMillis()));
+            mapper.save(rate);
+        }
+        return Response.ok().build();
     }
 }
